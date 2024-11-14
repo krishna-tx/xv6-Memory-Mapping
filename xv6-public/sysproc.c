@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "wmap.h"
 
 int
 sys_fork(void)
@@ -88,4 +89,25 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+int sys_wmap(void) {
+  uint addr;
+  int length, flags, fd;
+  if(argint(0, &addr) < 0) return FAILED; // argint failed
+  if(argint(0, &length) < 0) return FAILED; // argint failed
+  if(argint(0, &flags) < 0) return FAILED; // argint failed
+  if(argint(0, &fd) < 0) return FAILED; // argint failed
+
+  // check if addr is within 0x60000000 and 0x80000000
+  if(addr > KERNBASE || addr < KERNBASE - (1 << 29)) return FAILED;
+
+  // check if length > 0
+  if(length <= 0) return FAILED;
+
+  // check if MAP_SHARED and MAP_FIXED are set
+  if(flags & MAP_SHARED == 0 || flags & MAP_FIXED == 0) return FAILED;
+
+  wmap(addr, length, flags, fd); // call wmap in wmap.c
+  return SUCCESS;
 }
