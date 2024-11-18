@@ -21,6 +21,16 @@ struct wmapinfo {
     int n_loaded_pages[MAX_WMMAP_INFO]; // Number of pages physically loaded into memory
 };
 
+struct wmappings {
+    int total_mmaps;                    // Total number of wmap regions
+    int addr[MAX_WMMAP_INFO];           // Starting address of mapping
+    int length[MAX_WMMAP_INFO];         // Size of mapping
+    int n_loaded_pages[MAX_WMMAP_INFO]; // Number of pages physically loaded into memory
+    int flags[MAX_WMMAP_INFO];          // Flags of mapping
+    int fd[MAX_WMMAP_INFO];             // File Descriptor of mapping
+};
+
 uint wmap(uint addr, int length, int flags, int fd);
+int wunmap(uint addr);
 
 #endif

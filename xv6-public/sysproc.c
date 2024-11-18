@@ -95,11 +95,11 @@ uint sys_wmap(void) {
   uint addr;
   int length, flags, fd;
   if(argint(0, (int *)&addr) < 0) return FAILED; // argint failed
-  if(argint(0, &length) < 0) return FAILED; // argint failed
-  if(argint(0, &flags) < 0) return FAILED; // argint failed
-  if(argint(0, &fd) < 0) return FAILED; // argint failed
+  if(argint(1, &length) < 0) return FAILED; // argint failed
+  if(argint(2, &flags) < 0) return FAILED; // argint failed
+  if(argint(3, &fd) < 0) return FAILED; // argint failed
 
-  // check if addr is a multiple of page size and within [0x60000000, 0x80000000)
+  // check if addr is page aligned and within [0x60000000, 0x80000000)
   if(addr % PGSIZE != 0) return FAILED;
   if(addr >= (uint)KERNBASE || addr < (uint)KERNBASE - (1 << 29)) return FAILED;
 
@@ -110,5 +110,14 @@ uint sys_wmap(void) {
   if((flags & MAP_SHARED) == 0 || (flags & MAP_FIXED) == 0) return FAILED;
 
   return wmap(addr, length, flags, fd); // call wmap in wmap.c
-  // return SUCCESS;
+}
+
+int sys_wunmap(void) {
+  uint addr;
+  if(argint(0, (int *)&addr) < 0) return FAILED; // argint failed
+
+  // check if adr is page aligned
+  if(addr % PGSIZE != 0) return FAILED;
+
+  return wunmap(addr); // call wunmap in wmap.c
 }

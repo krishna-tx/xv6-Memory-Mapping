@@ -81,9 +81,9 @@ trap(struct trapframe *tf)
   case T_PGFLT: // T_PGFLT = 14
     uint addr_fault = rcr2(); // not page aligned
     struct proc* proc = myproc();
-    struct wmapinfo *mappings = proc->mappings;
+    struct wmappings *mappings = &proc->mappings;
     int mapping_found = -1;
-    for(int i = 0; i < 16; i++) {
+    for(int i = 0; i < MAX_WMMAP_INFO; i++) {
       if(mappings->length[i] > 0) { // a mapping exists
         if(addr_fault >= mappings->addr[i] && addr_fault < mappings->addr[i] + mappings->length[i]) { // corresponding mapping found
           mapping_found = 0;

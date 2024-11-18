@@ -112,7 +112,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  memset(p->mappings, 0, sizeof(p->mappings)); // OUR MODS
+  memset(&p->mappings, 0, sizeof(p->mappings)); // OUR MODS
 
   return p;
 }
