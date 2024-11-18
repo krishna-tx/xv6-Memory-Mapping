@@ -77,29 +77,34 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  // OUR MODS
   case T_PGFLT: // T_PGFLT = 14
-    uint addr_fault = rcr2();
+    uint addr_fault = rcr2(); // not page aligned
     struct proc* proc = myproc();
-    struct lazy_mappings *mappings = proc->mappings;
-    int mapping_idx = -1;
+    struct wmapinfo *mappings = proc->mappings;
+    int mapping_found = -1;
     for(int i = 0; i < 16; i++) {
-      if(addr_fault >= mappings[i].addr && addr_fault <= mappings[i].addr + mappings[i].length) { // mapping found
-          mapping_idx = i;
+      if(mappings->length[i] > 0) { // a mapping exists
+        if(addr_fault >= mappings->addr[i] && addr_fault < mappings->addr[i] + mappings->length[i]) { // corresponding mapping found
+          mapping_found = 0;
+
+          // perform mapping
+          char *mem = kalloc();
+          if(mem != 0) {
+            mappages(proc->pgdir, (void *)addr_fault, 4096, V2P(mem), PTE_W | PTE_U);
+            mappings->n_loaded_pages[i]++;
+          }
+          else { // no free physical pages
+            kill(proc->pid); // kill the process
+          }
           break;
+        }
       }
     }
-    if(mapping_idx > -1) { // perform mapping
-      char *physical_addr = kalloc();
-      if(physical_addr != 0) {
-        mappages(proc->pgdir, (void *)mappings[mapping_idx].addr, mappings[mapping_idx].length, (uint)physical_addr, PTE_W | PTE_U);
-      }
+    if(mapping_found == -1) {
+      cprintf("Segmentation Fault\n");
+      kill(proc->pid); // kill the process
     }
-    else {
-        cprintf("Segmentation Fault\n");
-        kill(proc->pid); // kill the process
-    }
-
-
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

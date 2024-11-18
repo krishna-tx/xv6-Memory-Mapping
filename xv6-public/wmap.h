@@ -1,6 +1,8 @@
 #ifndef WMAP_H
 #define WMAP_H
 
+#include "types.h"
+
 // Flags for wmap
 #define MAP_SHARED 0x0002
 #define MAP_ANONYMOUS 0x0004
@@ -17,12 +19,6 @@ struct wmapinfo {
     int addr[MAX_WMMAP_INFO];           // Starting address of mapping
     int length[MAX_WMMAP_INFO];         // Size of mapping
     int n_loaded_pages[MAX_WMMAP_INFO]; // Number of pages physically loaded into memory
-};
-
-struct lazy_mappings {
-    uint addr;
-    int length;
-    int flags;
 };
 
 uint wmap(uint addr, int length, int flags, int fd);

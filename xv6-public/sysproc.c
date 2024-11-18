@@ -99,9 +99,9 @@ uint sys_wmap(void) {
   if(argint(0, &flags) < 0) return FAILED; // argint failed
   if(argint(0, &fd) < 0) return FAILED; // argint failed
 
-  // check if addr is a multiple of page size and within [0x60000000, 0x80000000]
+  // check if addr is a multiple of page size and within [0x60000000, 0x80000000)
   if(addr % PGSIZE != 0) return FAILED;
-  if(addr > KERNBASE || addr < KERNBASE - (1 << 29)) return FAILED;
+  if(addr >= (uint)KERNBASE || addr < (uint)KERNBASE - (1 << 29)) return FAILED;
 
   // check if length > 0
   if(length <= 0) return FAILED;

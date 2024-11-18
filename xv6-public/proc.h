@@ -52,7 +52,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  struct lazy_mappings mappings[16]; // mappings used for lazy allocation
+  struct wmapinfo mappings[MAX_WMMAP_INFO]; // mappings used for lazy allocation
 };
 
 // Process memory is laid out contiguously, low addresses first:
