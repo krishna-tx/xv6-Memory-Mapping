@@ -91,10 +91,10 @@ sys_uptime(void)
   return xticks;
 }
 
-int sys_wmap(void) {
+uint sys_wmap(void) {
   uint addr;
   int length, flags, fd;
-  if(argint(0, &addr) < 0) return FAILED; // argint failed
+  if(argint(0, (int *)&addr) < 0) return FAILED; // argint failed
   if(argint(0, &length) < 0) return FAILED; // argint failed
   if(argint(0, &flags) < 0) return FAILED; // argint failed
   if(argint(0, &fd) < 0) return FAILED; // argint failed
@@ -107,8 +107,8 @@ int sys_wmap(void) {
   if(length <= 0) return FAILED;
 
   // check if MAP_SHARED and MAP_FIXED are set
-  if(flags & MAP_SHARED == 0 || flags & MAP_FIXED == 0) return FAILED;
+  if((flags & MAP_SHARED) == 0 || (flags & MAP_FIXED) == 0) return FAILED;
 
-  wmap(addr, length, flags, fd); // call wmap in wmap.c
-  return SUCCESS;
+  return wmap(addr, length, flags, fd); // call wmap in wmap.c
+  // return SUCCESS;
 }

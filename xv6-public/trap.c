@@ -77,6 +77,28 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT: // T_PGFLT = 14
+    uint addr_fault = rcr2();
+    struct proc* proc = myproc();
+    struct lazy_mappings *mappings = proc->mappings;
+    int mapping_idx = -1;
+    for(int i = 0; i < 16; i++) {
+      if(addr_fault >= mappings[i].addr && addr_fault <= mappings[i].addr + mappings[i].length) { // mapping found
+          mapping_idx = i;
+          break;
+      }
+    }
+    if(mapping_idx > -1) { // perform mapping
+      char *physical_addr = kalloc();
+      if(physical_addr != 0) {
+        mappages(proc->pgdir, (void *)mappings[mapping_idx].addr, mappings[mapping_idx].length, (uint)physical_addr, PTE_W | PTE_U);
+      }
+    }
+    else {
+        cprintf("Segmentation Fault\n");
+        kill(proc->pid); // kill the process
+    }
+
 
   //PAGEBREAK: 13
   default:
