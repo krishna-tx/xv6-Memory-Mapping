@@ -32,5 +32,7 @@ struct wmappings {
 
 uint wmap(uint addr, int length, int flags, int fd);
 int wunmap(uint addr);
+uint va2pa(uint va);
+int getwmapinfo(struct wmapinfo *wminfo);
 
 #endif

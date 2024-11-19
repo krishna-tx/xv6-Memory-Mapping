@@ -52,6 +52,10 @@ int wunmap(uint addr) {
             pte_t *pte;
             while(curr_addr < addr + length) {
                 pte = walkpgdir(proc->pgdir, (void *)curr_addr, 0);
+                if(pte == 0) { // no mapping yet
+                    curr_addr += PGSIZE;
+                    continue;
+                }
                 uint physical_addr = PTE_ADDR(*pte); // get physical addr of page
                 kfree(P2V(physical_addr)); // free physical page
                 *pte = 0; // clear the pte
@@ -69,6 +73,31 @@ int wunmap(uint addr) {
             mappings->fd[i] = 0;
             break;
         }
+    }
+    return SUCCESS;
+}
+
+uint va2pa(uint va) {
+    struct proc* proc = myproc();
+    if(!proc) return FAILED; // myproc() failed
+    pte_t *pte = walkpgdir(proc->pgdir, (void *)va, 0);
+    if(pte == 0) return FAILED; // no mapping yet
+
+    uint physical_addr = PTE_ADDR(*pte); // get physical addr of page
+
+    uint offset = va & (1 << 12 - 1);
+    return physical_addr + offset;
+}
+
+int getwmapinfo(struct wmapinfo *wminfo) {
+    struct proc* proc = myproc();
+    if(!proc) return FAILED; // myproc() failed
+    struct wmappings *mappings = &proc->mappings;
+    wminfo->total_mmaps = mappings->total_mmaps;
+    for(int i = 0; i < MAX_WMMAP_INFO; i++) {
+        wminfo->addr[i] = mappings->addr[i];
+        wminfo->length[i] = mappings->length[i];
+        wminfo->n_loaded_pages[i] = mappings->n_loaded_pages[i];
     }
     return SUCCESS;
 }
