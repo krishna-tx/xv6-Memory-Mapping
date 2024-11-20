@@ -7,6 +7,9 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -79,7 +82,7 @@ trap(struct trapframe *tf)
     break;
   // OUR MODS
   case T_PGFLT: // T_PGFLT = 14
-    uint addr_fault = rcr2(); // not page aligned
+    uint addr_fault = rcr2(); // get addr that caused page fault - not page aligned
     struct proc* proc = myproc();
     struct wmappings *mappings = &proc->mappings;
     int mapping_found = -1;
@@ -90,14 +93,22 @@ trap(struct trapframe *tf)
 
           // perform mapping
           char *mem = kalloc();
-          if(mem != 0) {
-            mappages(proc->pgdir, (void *)addr_fault, 4096, V2P(mem), PTE_W | PTE_U);
-            mappings->n_loaded_pages[i]++;
+          if((mappings->flags[i] & MAP_ANONYMOUS) != 0) { // not a file-backed mapping
+            memset(mem, 0, PGSIZE); // zero out the page
           }
-          else { // no free physical pages
-            kill(proc->pid); // kill the process
+          else { // file-backed mapping
+            struct file *file = proc->ofile[mappings->fd[i]];
+            struct inode *inode = file->ip;
+            int page_idx = (addr_fault - mappings->addr[i]) / PGSIZE;
+            int offset = page_idx * PGSIZE;
+            begin_op();
+            ilock(inode);
+            readi(inode, mem, offset, PGSIZE);
+            iunlock(inode);
+            end_op();
           }
-          break;
+          mappages(proc->pgdir, (void *)addr_fault, 4096, V2P(mem), PTE_W | PTE_U); // map page
+          mappings->n_loaded_pages[i]++;
         }
       }
     }
@@ -105,6 +116,7 @@ trap(struct trapframe *tf)
       cprintf("Segmentation Fault\n");
       kill(proc->pid); // kill the process
     }
+    break;
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

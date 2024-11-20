@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "wmap.h"
 
 struct {
   struct spinlock lock;
@@ -267,6 +268,12 @@ exit(void)
   curproc->state = ZOMBIE;
   sched();
   panic("zombie exit");
+
+  // OUR MODS
+  struct wmappings *mappings = &curproc->mappings;
+  for(int i = 0; i < MAX_WMMAP_INFO; i++) {
+    wunmap(mappings->addr[i]);
+  }
 }
 
 // Wait for a child process to exit and return its pid.

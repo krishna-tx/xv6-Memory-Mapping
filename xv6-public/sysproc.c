@@ -99,12 +99,12 @@ uint sys_wmap(void) {
   if(argint(2, &flags) < 0) return FAILED; // argint failed
   if(argint(3, &fd) < 0) return FAILED; // argint failed
 
-  // check if addr is page aligned and within [0x60000000, 0x80000000)
-  if(addr % PGSIZE != 0) return FAILED;
-  if(addr >= (uint)KERNBASE || addr < (uint)KERNBASE - (1 << 29)) return FAILED;
-
   // check if length > 0
   if(length <= 0) return FAILED;
+
+  // check if addr is page aligned and within [0x60000000, 0x80000000)
+  if(addr % PGSIZE != 0) return FAILED;
+  if((unsigned long long)addr + (unsigned long long)length >= KERNBASE || addr < KERNBASE - (1 << 29)) return FAILED;
 
   // check if MAP_SHARED and MAP_FIXED are set
   if((flags & MAP_SHARED) == 0 || (flags & MAP_FIXED) == 0) return FAILED;
@@ -130,6 +130,6 @@ uint sys_va2pa(void) {
 
 int sys_getwmapinfo(void) {
   struct wmapinfo *wminfo;
-  if(argptr(0, (void **)&wminfo, sizeof(*wminfo)) < 0) return FAILED; // argptr failed
+  if(argptr(0, (char **)&wminfo, sizeof(*wminfo)) < 0) return FAILED; // argptr failed
   return getwmapinfo(wminfo);
 }
