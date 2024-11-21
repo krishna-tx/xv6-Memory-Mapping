@@ -6,6 +6,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "elf.h"
+#include "ref.h"
 
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
@@ -71,6 +72,10 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
     if(*pte & PTE_P)
       panic("remap");
     *pte = pa | perm | PTE_P;
+
+    // OUR MODS
+    // reference_count[pa / PGSIZE]++;
+
     if(a == last)
       break;
     a += PGSIZE;

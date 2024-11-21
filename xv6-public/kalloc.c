@@ -8,6 +8,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "spinlock.h"
+#include "ref.h"
 
 void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
@@ -22,6 +23,9 @@ struct {
   int use_lock;
   struct run *freelist;
 } kmem;
+
+// OUR MODS
+// unsigned char reference_count[KERNBASE / PGSIZE]; // declare/init an array to keep track of reference counts for physical pages
 
 // Initialization happens in two phases.
 // 1. main() calls kinit1() while still using entrypgdir to place just
@@ -63,6 +67,12 @@ kfree(char *v)
 
   if((uint)v % PGSIZE || v < end || V2P(v) >= PHYSTOP)
     panic("kfree");
+
+  // OUR MODS
+  // if(kmem.use_lock != 0) {
+  //   reference_count[V2P(v) / PGSIZE]--;
+  //   if(reference_count[V2P(v) / PGSIZE] > 0) return;
+  // }
 
   // Fill with junk to catch dangling refs.
   memset(v, 1, PGSIZE);

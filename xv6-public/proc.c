@@ -221,6 +221,45 @@ fork(void)
 
   release(&ptable.lock);
 
+  // OUR MODS
+
+  // copy mappings from parent to child
+  struct wmappings *curproc_mappings = &curproc->mappings;
+  struct wmappings *np_mappings = &np->mappings;
+  np_mappings->total_mmaps = curproc_mappings->total_mmaps;
+  for(int i = 0; i < MAX_WMMAP_INFO; i++) {
+    if(curproc_mappings->length[i] > 0) { // mapping found
+      np_mappings->addr[i] = curproc_mappings->addr[i];
+      np_mappings->length[i] = curproc_mappings->length[i];
+      np_mappings->n_loaded_pages[i] = curproc_mappings->n_loaded_pages[i];
+      np_mappings->flags[i] = curproc_mappings->flags[i];
+
+      // handle file backed
+      if((np_mappings->flags[i] & MAP_ANONYMOUS) == 0) { // file-backed
+        for(int j = 0; j < NOFILE; j++) {
+          if(np->ofile[j] == 0) { // empty slot is found
+            np->ofile[j] = filedup(curproc->ofile[curproc_mappings->fd[i]]);
+            np_mappings->fd[i] = j;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  for(uint addr = KERNBASE - (1 << 29); addr < KERNBASE; addr += PGSIZE) {
+    pte_t *pte = walkpgdir(curproc->pgdir, (void *)addr, 0);
+    if(pte == 0 || (*pte & PTE_P) == 0) { // page table doesn't exist or pte doesn't contiain ppn
+        continue;
+    }
+    else {
+      uint pa = PTE_ADDR(*pte);
+      int flags = PTE_FLAGS(*pte);
+      mappages(np->pgdir, (void *)addr, 4096, pa, flags);
+    }
+
+  }
+
   return pid;
 }
 
@@ -264,16 +303,18 @@ exit(void)
     }
   }
 
-  // Jump into the scheduler, never to return.
-  curproc->state = ZOMBIE;
-  sched();
-  panic("zombie exit");
-
   // OUR MODS
   struct wmappings *mappings = &curproc->mappings;
   for(int i = 0; i < MAX_WMMAP_INFO; i++) {
     wunmap(mappings->addr[i]);
   }
+
+  // Jump into the scheduler, never to return.
+  curproc->state = ZOMBIE;
+  sched();
+  panic("zombie exit");
+
+  // TODO: close filedupped fd's
 }
 
 // Wait for a child process to exit and return its pid.
