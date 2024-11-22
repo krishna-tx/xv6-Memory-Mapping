@@ -84,6 +84,7 @@ trap(struct trapframe *tf)
   // OUR MODS
   case T_PGFLT: // T_PGFLT = 14
     uint addr_fault = rcr2(); // get addr that caused page fault - not page aligned
+    if(addr_fault >= KERNBASE) cprintf("addr is too high!\n");
     struct proc* proc = myproc();
     struct wmappings *mappings = &proc->mappings;
     int mapping_found = -1;
@@ -141,7 +142,6 @@ trap(struct trapframe *tf)
       // cprintf("break 6\n");
       break;
     }
-    cprintf("came here!\n");
     for(int i = 0; i < MAX_WMMAP_INFO; i++) {
       if(mappings->length[i] > 0) { // a mapping exists
         if(addr_fault >= mappings->addr[i] && addr_fault < mappings->addr[i] + mappings->length[i]) { // corresponding mapping found

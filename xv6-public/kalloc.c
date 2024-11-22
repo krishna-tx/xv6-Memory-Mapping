@@ -69,10 +69,10 @@ kfree(char *v)
     panic("kfree");
 
   // OUR MODS
-  // if(kmem.use_lock != 0) {
-  //   reference_count[V2P(v) / PGSIZE]--;
-  //   if(reference_count[V2P(v) / PGSIZE] > 0) return;
-  // }
+  if(kmem.use_lock != 0) {
+    reference_count[V2P(v) / PGSIZE]--;
+    if(reference_count[V2P(v) / PGSIZE] > 0) return;
+  }
 
   // Fill with junk to catch dangling refs.
   memset(v, 1, PGSIZE);
