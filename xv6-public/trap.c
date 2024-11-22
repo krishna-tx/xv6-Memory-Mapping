@@ -110,7 +110,7 @@ trap(struct trapframe *tf)
         memmove(mem, (char*)page_addr, PGSIZE);        
         // mappages(proc->pgdir, (void *)page_addr, PGSIZE, V2P(mem), flags);
         // *pte = V2P(mem) | flags | PTE_P;
-        reference_count[physical_addr / PGSIZE]--;
+        // reference_count[physical_addr / PGSIZE]--;
         kfree(P2V(physical_addr)); // free physical page
       }
       else {

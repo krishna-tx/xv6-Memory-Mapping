@@ -350,21 +350,16 @@ copyuvm(pde_t *pgdir, uint sz)
       *pte &= ~PTE_W; // remove writeable flag
       lcr3(V2P(pgdir)); // tlb flush pgdir
     }
-    else { // page is not writeable
-      flags &= ~PTE_PW; // remove previously writeable flag
-      *pte &= ~PTE_PW; // remove previously writeable flag
-      lcr3(V2P(pgdir)); // tlb flush pgdir
-    }
-    // flags &= ~PTE_W; // remove writeable flag
+    // else { // page is not writeable
+    //   flags &= ~PTE_PW; // remove previously writeable flag
+    //   *pte &= ~PTE_PW; // remove previously writeable flag
+    //   lcr3(V2P(pgdir)); // tlb flush pgdir
+    // }
 
     if(mappages(d, (void *)i, PGSIZE, pa, flags) < 0) {
       goto bad;
     }
     lcr3(V2P(d)); // tlb flush d
-    // reference_count[pa / PGSIZE]++;
-
-    // *pte &= ~PTE_W; // make parent also not readable
-    // lcr3(V2P(pgdir)); // tlb flush parent pgdir 
 
     pte_t *test = walkpgdir(d, (void *)i, 0);
     if(*test != *pte) panic("not the same !");
