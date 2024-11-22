@@ -84,12 +84,10 @@ trap(struct trapframe *tf)
   // OUR MODS
   case T_PGFLT: // T_PGFLT = 14
     uint addr_fault = rcr2(); // get addr that caused page fault - not page aligned
-    if(addr_fault >= KERNBASE) cprintf("addr is too high!\n");
     struct proc* proc = myproc();
     struct wmappings *mappings = &proc->mappings;
     int mapping_found = -1;
     if(addr_fault < KERNBASE - (1 << 29)) { // not in wmap heap range
-      // cprintf("break 0\n");
       // check if cow necessary
       // if ref_count = 0 => map page
       char *page_addr = (char*)PGROUNDDOWN(addr_fault);
@@ -98,41 +96,38 @@ trap(struct trapframe *tf)
         cprintf("break 1\n");
         break;
       }
-      // cprintf("break 2\n");
       uint physical_addr = PTE_ADDR(*pte);
-      reference_count[physical_addr / PGSIZE]--;
       uint flags = PTE_FLAGS(*pte);
+      if((flags & PTE_PW) == 0) {
+        cprintf("Segmentation Fault\n");
+        kill(proc->pid); // kill the process
+        break;
+      }
       
-      // if(reference_count[physical_addr / PGSIZE] > 0) {
-      //   char *mem = kalloc();
-      //   memmove(mem, (char*)page_addr, PGSIZE);        
-        
-      //   if(flags & PTE_PW) {
-      //     flags |= PTE_W;
-      //     mappages(proc->pgdir, (void *)page_addr, PGSIZE, V2P(mem), flags);
-      //     kfree(P2V(physical_addr)); // free physical page
-      //   }
-      //   else {
-      //     cprintf("Segmentation Fault\n");
-      //     kill(proc->pid); // kill the process
-      //   }
-      // }
-      // else {
-      //   char *mem = kalloc();
-      //   memset(mem, 0, PGSIZE); // zero out the page
-      //   mappages(proc->pgdir, (void *)addr_fault, PGSIZE, V2P(mem), PTE_W | PTE_U); // map page
-      // }
-      // cprintf("break 3\n");
       char *mem = kalloc();
-      // cprintf("break 4\n");
+      flags |= PTE_W;
+      if(reference_count[physical_addr / PGSIZE] > 0) {
+        memmove(mem, (char*)page_addr, PGSIZE);        
+        // mappages(proc->pgdir, (void *)page_addr, PGSIZE, V2P(mem), flags);
+        // *pte = V2P(mem) | flags | PTE_P;
+        reference_count[physical_addr / PGSIZE]--;
+        kfree(P2V(physical_addr)); // free physical page
+      }
+      else {
+        memset(mem, 0, PGSIZE); // zero out the page
+        // mappages(proc->pgdir, (void *)addr_fault, PGSIZE, V2P(mem), PTE_W | PTE_U); // map page
+      }
+      *pte = V2P(mem) | flags | PTE_P;
+      lcr3(V2P(proc->pgdir)); // tlb flush pgdir
+      reference_count[V2P(mem) / PGSIZE]++;
+      /**
+      char *mem = kalloc();
       memmove(mem, (char *)P2V(physical_addr), PGSIZE);
-      // cprintf("break 5\n");
       
       // *pte = V2P(page_addr) | flags | PTE_W;
       // *pte = 0;
       *pte = V2P(mem) | flags | PTE_W | PTE_P;
-      lcr3(V2P(proc->pgdir)); // flush tlb
-      reference_count[V2P(mem) / PGSIZE]++;
+      
       // reference_count[V2P(page_addr) / PGSIZE]++;
 
       // *pte = physical_addr | flags | PTE_P;
@@ -140,6 +135,7 @@ trap(struct trapframe *tf)
       // mappages(proc->pgdir, (void *)addr_fault, PGSIZE, V2P(mem), flags | PTE_W);
 
       // cprintf("break 6\n");
+      */
       break;
     }
     for(int i = 0; i < MAX_WMMAP_INFO; i++) {

@@ -343,31 +343,33 @@ copyuvm(pde_t *pgdir, uint sz)
 
 
     // OUR MODS
-    // if(flags & PTE_W) { // page is writeable
-    //   flags |= PTE_PW; // add previously writeable flag
-    // }
-    // else { // page is not writeable
-    //   flags &= ~PTE_PW; // remove previously writeable flag
-    // }
+    if(flags & PTE_W) { // page is writeable
+      flags |= PTE_PW; // add previously writeable flag
+      flags &= ~PTE_W; // remove writeable flag
+      *pte |= PTE_PW; // add previously writeable flag
+      *pte &= ~PTE_W; // remove writeable flag
+      lcr3(V2P(pgdir)); // tlb flush pgdir
+    }
+    else { // page is not writeable
+      flags &= ~PTE_PW; // remove previously writeable flag
+      *pte &= ~PTE_PW; // remove previously writeable flag
+      lcr3(V2P(pgdir)); // tlb flush pgdir
+    }
     // flags &= ~PTE_W; // remove writeable flag
 
-    flags &= ~PTE_W; // make child not readable
-    // if(mappages(d, (void *)i, PGSIZE, pa, flags) < 0) {
-    //   goto bad;
-    // }
-    mappages(d, (void *)i, PGSIZE, pa, flags);
-    // pte_t *child_pte = walkpgdir(d, (void *)i, 1);
-    // *child_pte = pa | flags | PTE_P;
-    lcr3(V2P(d)); // tlb flush cr3
+    if(mappages(d, (void *)i, PGSIZE, pa, flags) < 0) {
+      goto bad;
+    }
+    lcr3(V2P(d)); // tlb flush d
     // reference_count[pa / PGSIZE]++;
 
-    *pte &= ~PTE_W; // make parent also not readable
-    lcr3(V2P(pgdir)); // tlb flush parent pgdir 
-    // *pte |= flags; // add flags back
+    // *pte &= ~PTE_W; // make parent also not readable
+    // lcr3(V2P(pgdir)); // tlb flush parent pgdir 
+
+    pte_t *test = walkpgdir(d, (void *)i, 0);
+    if(*test != *pte) panic("not the same !");
     
     /**
-    flags &= ~PTE_W;
-
     if((mem = kalloc()) == 0)
       goto bad;
     memmove(mem, (char*)P2V(pa), PGSIZE);
@@ -380,9 +382,9 @@ copyuvm(pde_t *pgdir, uint sz)
   }
   return d;
 
-// bad:
-//   freevm(d);
-//   return 0;
+bad:
+  freevm(d);
+  return 0;
 }
 
 //PAGEBREAK!
