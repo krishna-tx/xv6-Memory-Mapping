@@ -6,7 +6,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "elf.h"
-#include "ref.h"
+#include "reference.h"
 
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
@@ -74,7 +74,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
     *pte = pa | perm | PTE_P;
 
     // OUR MODS
-    // reference_count[pa / PGSIZE]++;
+    reference_count[pa / PGSIZE]++;
 
     if(a == last)
       break;
@@ -329,7 +329,7 @@ copyuvm(pde_t *pgdir, uint sz)
   pde_t *d;
   pte_t *pte;
   uint pa, i, flags;
-  char *mem;
+  // char *mem;
 
   if((d = setupkvm()) == 0)
     return 0;
@@ -340,19 +340,43 @@ copyuvm(pde_t *pgdir, uint sz)
       panic("copyuvm: page not present");
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto bad;
-    memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
-      kfree(mem);
-      goto bad;
-    }
+
+    // OUR MODS
+    // if(flags & PTE_W) { // page is writeable
+    //   flags |= PTE_PW; // add previously writeable flag
+    // }
+    // else { // page is not writeable
+    //   flags &= ~PTE_PW; // remove previously writeable flag
+    // }
+    // flags &= ~PTE_W; // remove writeable flag
+
+    flags &= ~PTE_W; // make child not readable
+    // if(mappages(d, (void *)i, PGSIZE, pa, flags) < 0) {
+    //   goto bad;
+    // }
+    mappages(d, (void *)i, PGSIZE, pa, flags);
+    lcr3(V2P(d)); // tlb flush cr3
+
+    *pte &= ~PTE_W; // make parent also not readable
+    lcr3(V2P(pgdir)); // tlb flush parent pgdir 
+    // *pte |= flags; // add flags back
+
+    pte_t *test = walkpgdir(d, (void *)i, 0);
+    if(*test != *pte) panic("not same!");
+
+    // if((mem = kalloc()) == 0)
+    //   goto bad;
+    // memmove(mem, (char*)P2V(pa), PGSIZE);
+    // if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
+    //   kfree(mem);
+    //   goto bad;
+    // }
   }
   return d;
 
-bad:
-  freevm(d);
-  return 0;
+// bad:
+//   freevm(d);
+//   return 0;
 }
 
 //PAGEBREAK!

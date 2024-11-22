@@ -247,6 +247,7 @@ fork(void)
     }
   }
 
+  // map pages in the wmap heap section
   for(uint addr = KERNBASE - (1 << 29); addr < KERNBASE; addr += PGSIZE) {
     pte_t *pte = walkpgdir(curproc->pgdir, (void *)addr, 0);
     if(pte == 0 || (*pte & PTE_P) == 0) { // page table doesn't exist or pte doesn't contiain ppn
@@ -255,9 +256,8 @@ fork(void)
     else {
       uint pa = PTE_ADDR(*pte);
       int flags = PTE_FLAGS(*pte);
-      mappages(np->pgdir, (void *)addr, 4096, pa, flags);
+      mappages(np->pgdir, (void *)addr, PGSIZE, pa, flags); // map page
     }
-
   }
 
   return pid;
@@ -275,6 +275,12 @@ exit(void)
 
   if(curproc == initproc)
     panic("init exiting");
+
+  // OUR MODS
+  struct wmappings *mappings = &curproc->mappings;
+  for(int i = 0; i < MAX_WMMAP_INFO; i++) {
+    wunmap(mappings->addr[i]);
+  }
 
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
@@ -303,18 +309,10 @@ exit(void)
     }
   }
 
-  // OUR MODS
-  struct wmappings *mappings = &curproc->mappings;
-  for(int i = 0; i < MAX_WMMAP_INFO; i++) {
-    wunmap(mappings->addr[i]);
-  }
-
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
   panic("zombie exit");
-
-  // TODO: close filedupped fd's
 }
 
 // Wait for a child process to exit and return its pid.

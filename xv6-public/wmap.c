@@ -8,7 +8,6 @@
 #include "sleeplock.h"
 #include "fs.h"
 #include "file.h"
-// #include "ref.h"
 
 uint wmap(uint addr, int length, int flags, int fd) {
     struct proc* proc = myproc();
@@ -42,10 +41,7 @@ uint wmap(uint addr, int length, int flags, int fd) {
             mappings->flags[i] = flags;
 
             // check for MAP_ANONYMOUS flag
-            if((flags & MAP_ANONYMOUS) != 0) { // not file-backed
-                mappings->fd[i] = fd;
-            }
-            else { // file-backed
+            if((flags & MAP_ANONYMOUS) == 0) { // file-backed
                 for(int j = 0; j < NOFILE; j++) {
                     if(proc->ofile[j] == 0) { // empty slot is found
                         proc->ofile[j] = filedup(proc->ofile[fd]);
@@ -102,7 +98,6 @@ int wunmap(uint addr) {
             mappings->length[i] = 0;
             mappings->n_loaded_pages[i] = 0;
             mappings->flags[i] = 0;
-            mappings->fd[i] = 0;
             break;
         }
     }

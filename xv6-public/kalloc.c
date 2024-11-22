@@ -8,7 +8,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "spinlock.h"
-#include "ref.h"
+#include "reference.h"
 
 void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
@@ -25,7 +25,7 @@ struct {
 } kmem;
 
 // OUR MODS
-// unsigned char reference_count[KERNBASE / PGSIZE]; // declare/init an array to keep track of reference counts for physical pages
+unsigned char reference_count[KERNBASE / PGSIZE]; // declare/init an array to keep track of reference counts for physical pages
 
 // Initialization happens in two phases.
 // 1. main() calls kinit1() while still using entrypgdir to place just
