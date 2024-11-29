@@ -73,8 +73,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
       panic("remap");
     *pte = pa | perm | PTE_P;
 
-    // OUR MODS
-    reference_count[pa / PGSIZE]++;
+    reference_count[pa / PGSIZE]++; // MY MODS
 
     if(a == last)
       break;
@@ -211,7 +210,7 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz, uint f
     if((pte = walkpgdir(pgdir, addr+i, 0)) == 0)
       panic("loaduvm: address should exist");
     
-    // OUR MODS
+    // MY MODS
     *pte &= ~PTE_U; // clear out the PTE_U flag in pte
     *pte &= ~PTE_W; // clear out the PTE_W flag in pte
     *pte |= flags; // add the new flags to the pte
@@ -329,7 +328,6 @@ copyuvm(pde_t *pgdir, uint sz)
   pde_t *d;
   pte_t *pte;
   uint pa, i, flags;
-  // char *mem;
 
   if((d = setupkvm()) == 0)
     return 0;
@@ -342,7 +340,7 @@ copyuvm(pde_t *pgdir, uint sz)
     flags = PTE_FLAGS(*pte);
 
 
-    // OUR MODS
+    // MY MODS
     if(flags & PTE_W) { // page is writeable
       flags |= PTE_PW; // add previously writeable flag
       flags &= ~PTE_W; // remove writeable flag
@@ -350,30 +348,11 @@ copyuvm(pde_t *pgdir, uint sz)
       *pte &= ~PTE_W; // remove writeable flag
       lcr3(V2P(pgdir)); // tlb flush pgdir
     }
-    // else { // page is not writeable
-    //   flags &= ~PTE_PW; // remove previously writeable flag
-    //   *pte &= ~PTE_PW; // remove previously writeable flag
-    //   lcr3(V2P(pgdir)); // tlb flush pgdir
-    // }
 
     if(mappages(d, (void *)i, PGSIZE, pa, flags) < 0) {
       goto bad;
     }
     lcr3(V2P(d)); // tlb flush d
-
-    pte_t *test = walkpgdir(d, (void *)i, 0);
-    if(*test != *pte) panic("not the same !");
-    
-    /**
-    if((mem = kalloc()) == 0)
-      goto bad;
-    memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
-      kfree(mem);
-      goto bad;
-    }
-    lcr3(V2P(d)); // tlb flush cr3
-    */
   }
   return d;
 

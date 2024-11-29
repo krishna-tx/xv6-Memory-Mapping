@@ -21,6 +21,7 @@ struct wmapinfo {
     int n_loaded_pages[MAX_WMMAP_INFO]; // Number of pages physically loaded into memory
 };
 
+// MY MODS
 struct wmappings {
     int total_mmaps;                    // Total number of wmap regions
     int addr[MAX_WMMAP_INFO];           // Starting address of mapping

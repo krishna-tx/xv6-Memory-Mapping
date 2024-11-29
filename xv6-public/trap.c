@@ -81,17 +81,16 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
-  // OUR MODS
+
+  // MY MODS
   case T_PGFLT: // T_PGFLT = 14
     uint addr_fault = rcr2(); // get addr that caused page fault - not page aligned
     struct proc* proc = myproc();
     struct wmappings *mappings = &proc->mappings;
     int mapping_found = -1;
     if(addr_fault < KERNBASE - (1 << 29)) { // not in wmap heap range
-      // check if cow necessary
-      // if ref_count = 0 => map page
       char *page_addr = (char*)PGROUNDDOWN(addr_fault);
-      pte_t *pte = walkpgdir(proc->pgdir, page_addr, 0); // TODO - check ret val of walkpgdir
+      pte_t *pte = walkpgdir(proc->pgdir, page_addr, 0);
       if(pte == 0 || (*pte & PTE_P) == 0) {
         cprintf("break 1\n");
         break;
@@ -107,35 +106,15 @@ trap(struct trapframe *tf)
       char *mem = kalloc();
       flags |= PTE_W;
       if(reference_count[physical_addr / PGSIZE] > 0) {
-        memmove(mem, (char*)page_addr, PGSIZE);        
-        // mappages(proc->pgdir, (void *)page_addr, PGSIZE, V2P(mem), flags);
-        // *pte = V2P(mem) | flags | PTE_P;
-        // reference_count[physical_addr / PGSIZE]--;
-        kfree(P2V(physical_addr)); // free physical page
+        memmove(mem, (char*)page_addr, PGSIZE); // copy the contents to new physical page
+        kfree(P2V(physical_addr)); // free old physical page - if ref count is 1
       }
       else {
         memset(mem, 0, PGSIZE); // zero out the page
-        // mappages(proc->pgdir, (void *)addr_fault, PGSIZE, V2P(mem), PTE_W | PTE_U); // map page
       }
       *pte = V2P(mem) | flags | PTE_P;
       lcr3(V2P(proc->pgdir)); // tlb flush pgdir
       reference_count[V2P(mem) / PGSIZE]++;
-      /**
-      char *mem = kalloc();
-      memmove(mem, (char *)P2V(physical_addr), PGSIZE);
-      
-      // *pte = V2P(page_addr) | flags | PTE_W;
-      // *pte = 0;
-      *pte = V2P(mem) | flags | PTE_W | PTE_P;
-      
-      // reference_count[V2P(page_addr) / PGSIZE]++;
-
-      // *pte = physical_addr | flags | PTE_P;
-      
-      // mappages(proc->pgdir, (void *)addr_fault, PGSIZE, V2P(mem), flags | PTE_W);
-
-      // cprintf("break 6\n");
-      */
       break;
     }
     for(int i = 0; i < MAX_WMMAP_INFO; i++) {

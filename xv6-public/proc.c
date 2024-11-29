@@ -113,7 +113,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  memset(&p->mappings, 0, sizeof(p->mappings)); // OUR MODS
+  memset(&p->mappings, 0, sizeof(p->mappings)); // MY MODS
 
   return p;
 }
@@ -221,8 +221,7 @@ fork(void)
 
   release(&ptable.lock);
 
-  // OUR MODS
-
+  // MY MODS
   // copy mappings from parent to child
   struct wmappings *curproc_mappings = &curproc->mappings;
   struct wmappings *np_mappings = &np->mappings;
@@ -235,7 +234,7 @@ fork(void)
       np_mappings->flags[i] = curproc_mappings->flags[i];
 
       // handle file backed
-      if((np_mappings->flags[i] & MAP_ANONYMOUS) == 0) { // file-backed
+      if((np_mappings->flags[i] & MAP_ANONYMOUS) == 0) {
         for(int j = 0; j < NOFILE; j++) {
           if(np->ofile[j] == 0) { // empty slot is found
             np->ofile[j] = filedup(curproc->ofile[curproc_mappings->fd[i]]);
@@ -276,10 +275,10 @@ exit(void)
   if(curproc == initproc)
     panic("init exiting");
 
-  // OUR MODS
+  // MY MODS
   struct wmappings *mappings = &curproc->mappings;
   for(int i = 0; i < MAX_WMMAP_INFO; i++) {
-    wunmap(mappings->addr[i]);
+    wunmap(mappings->addr[i]); // unmap mapping
   }
 
   // Close all open files.

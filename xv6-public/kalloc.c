@@ -24,7 +24,7 @@ struct {
   struct run *freelist;
 } kmem;
 
-// OUR MODS
+// MY MODS
 unsigned char reference_count[KERNBASE / PGSIZE]; // declare/init an array to keep track of reference counts for physical pages
 
 // Initialization happens in two phases.
@@ -68,7 +68,7 @@ kfree(char *v)
   if((uint)v % PGSIZE || v < end || V2P(v) >= PHYSTOP)
     panic("kfree");
 
-  // OUR MODS
+  // MY MODS
   if(kmem.use_lock != 0) {
     reference_count[V2P(v) / PGSIZE]--;
     if(reference_count[V2P(v) / PGSIZE] > 0) return;
